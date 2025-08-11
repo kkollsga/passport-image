@@ -5,88 +5,290 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>3x4 Image Cropper</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
             touch-action: none;
             -webkit-user-select: none;
             user-select: none;
         }
         
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #111827;
+            color: white;
             min-height: 100vh;
             min-height: -webkit-fill-available;
         }
         
+        .main-container {
+            max-width: 28rem;
+            margin: 0 auto;
+            padding: 1rem;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom, 20px));
+            padding-top: calc(1rem + env(safe-area-inset-top, 20px));
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h1 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        #upload-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .upload-box {
+            background-color: #1f2937;
+            border: 2px dashed #4b5563;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .upload-box:hover {
+            background-color: #374151;
+        }
+        
+        .upload-icon {
+            width: 3rem;
+            height: 3rem;
+            margin: 0 auto 1rem;
+            color: #9ca3af;
+        }
+        
+        .upload-text {
+            color: #9ca3af;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        #editor-section {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .canvas-container-outer {
+            position: relative;
+            background-color: #1f2937;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            max-height: 50vh;
+        }
+        
+        .canvas-aspect-ratio {
+            position: relative;
+            width: 100%;
+            padding-bottom: 133.33%;
+        }
+        
         #canvas-container {
-            touch-action: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
         
         .crop-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid white;
+            pointer-events: none;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
         }
         
-        .main-container {
-            padding-bottom: env(safe-area-inset-bottom, 20px);
-            padding-top: env(safe-area-inset-top, 20px);
+        .controls {
+            flex-shrink: 0;
+            padding-bottom: 1rem;
+        }
+        
+        .control-group {
+            margin-bottom: 0.75rem;
+        }
+        
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background-color: #1f2937;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+        
+        .zoom-label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            width: 4rem;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 0.5rem;
+            background: #4b5563;
+            border-radius: 0.25rem;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 1.25rem;
+            height: 1.25rem;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .zoom-value {
+            font-size: 0.875rem;
+            width: 3rem;
+            text-align: right;
+        }
+        
+        .help-text {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            text-align: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        button {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            color: white;
+        }
+        
+        button:hover {
+            opacity: 0.8;
+        }
+        
+        .btn-reset {
+            flex: 1;
+            background-color: #374151;
+        }
+        
+        .btn-download {
+            flex: 1;
+            background-color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .btn-new {
+            width: 100%;
+            background-color: #1f2937;
+            font-size: 0.875rem;
+        }
+        
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col">
-    <div class="main-container container mx-auto px-4 py-4 max-w-md flex flex-col h-screen">
-        <h1 class="text-xl font-bold mb-4 text-center flex-shrink-0">3x4 Image Cropper</h1>
+<body>
+    <div class="main-container">
+        <h1>3x4 Image Cropper</h1>
         
         <!-- Upload Section -->
-        <div id="upload-section" class="flex-1 flex flex-col justify-center">
-            <label for="image-upload" class="block w-full">
-                <div class="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-700 transition">
-                    <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div id="upload-section">
+            <label for="image-upload">
+                <div class="upload-box">
+                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                     </svg>
-                    <p class="text-gray-400">Tap to upload image</p>
+                    <p class="upload-text">Tap to upload image</p>
                 </div>
             </label>
-            <input type="file" id="image-upload" accept="image/*" class="hidden">
+            <input type="file" id="image-upload" accept="image/*">
         </div>
         
         <!-- Editor Section -->
-        <div id="editor-section" class="hidden flex-1 flex flex-col">
-            <!-- Canvas Container with fixed aspect ratio -->
-            <div class="flex-1 flex flex-col min-h-0">
-                <div class="relative bg-gray-800 rounded-lg overflow-hidden flex-1" style="max-height: 50vh;">
-                    <div class="relative w-full" style="padding-bottom: 133.33%;">
-                        <div id="canvas-container" class="absolute inset-0">
-                            <canvas id="canvas" class="w-full h-full"></canvas>
-                            <div class="crop-area absolute inset-0 border-2 border-white pointer-events-none"></div>
+        <div id="editor-section">
+            <div class="canvas-wrapper">
+                <div class="canvas-container-outer">
+                    <div class="canvas-aspect-ratio">
+                        <div id="canvas-container">
+                            <canvas id="canvas"></canvas>
+                            <div class="crop-area"></div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Controls -->
-            <div class="space-y-3 mt-4 flex-shrink-0 pb-4">
-                <div class="flex items-center space-x-4 bg-gray-800 p-3 rounded-lg">
-                    <span class="text-sm text-gray-400 w-16">Zoom:</span>
-                    <input type="range" id="zoom-slider" min="0.1" max="3" step="0.1" value="1" class="flex-1">
-                    <span id="zoom-value" class="text-sm w-12 text-right">1.0x</span>
+            <div class="controls">
+                <div class="control-group">
+                    <div class="zoom-control">
+                        <span class="zoom-label">Zoom:</span>
+                        <input type="range" id="zoom-slider" min="0.1" max="3" step="0.1" value="1">
+                        <span id="zoom-value" class="zoom-value">1.0x</span>
+                    </div>
                 </div>
                 
-                <div class="text-xs text-gray-400 text-center">
+                <div class="help-text">
                     Pinch to zoom • Drag to move
                 </div>
                 
-                <div class="flex space-x-3">
-                    <button id="reset-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 px-4 rounded-lg transition">
-                        Reset
-                    </button>
-                    <button id="download-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 px-4 rounded-lg transition font-semibold">
-                        Download
-                    </button>
+                <div class="button-group">
+                    <button id="reset-btn" class="btn-reset">Reset</button>
+                    <button id="download-btn" class="btn-download">Download</button>
                 </div>
                 
-                <button id="new-image-btn" class="w-full bg-gray-800 hover:bg-gray-700 py-2 px-4 rounded-lg transition text-sm">
-                    New Image
-                </button>
+                <button id="new-image-btn" class="btn-new">New Image</button>
             </div>
         </div>
     </div>
