@@ -256,6 +256,141 @@
             display: none !important;
         }
         
+        /* Export Dialog Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        
+        .modal {
+            background-color: #1f2937;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 320px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+        
+        .dimension-inputs {
+            margin-bottom: 1rem;
+        }
+        
+        .input-group {
+            margin-bottom: 0.75rem;
+        }
+        
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-bottom: 0.25rem;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .input-wrapper input {
+            flex: 1;
+            background-color: #111827;
+            border: 1px solid #374151;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .input-wrapper span {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            width: 2rem;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+            margin-bottom: 1rem;
+        }
+        
+        .preset-btn {
+            padding: 0.375rem 0.625rem;
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            color: #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .preset-btn:hover {
+            background-color: #4b5563;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 0.625rem;
+            border-radius: 0.375rem;
+            border: none;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            color: white;
+        }
+        
+        .modal-btn:hover {
+            opacity: 0.8;
+        }
+        
+        .modal-cancel {
+            background-color: #374151;
+        }
+        
+        .modal-confirm {
+            background-color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .size-info {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            text-align: center;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background-color: #111827;
+            border-radius: 0.25rem;
+        }
+        
         @media (max-height: 700px) {
             .canvas-container-outer {
                 max-width: min(100%, 250px);
@@ -333,6 +468,50 @@
                 <button id="new-image-btn" class="btn-new">New Image</button>
             </div>
         </div>
+        
+        <!-- Export Dialog -->
+        <div id="export-dialog" class="modal-overlay hidden">
+            <div class="modal">
+                <h2>Export Settings</h2>
+                
+                <div class="dimension-inputs">
+                    <div class="input-group">
+                        <label>Width (3 ratio)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="width-input" min="30" max="9000" value="900">
+                            <span>px</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Height (4 ratio)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="height-input" min="40" max="12000" value="1200">
+                            <span>px</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <label style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.5rem; display: block;">Quick Presets:</label>
+                <div class="preset-buttons">
+                    <button class="preset-btn" data-width="300" data-height="400">300×400</button>
+                    <button class="preset-btn" data-width="600" data-height="800">600×800</button>
+                    <button class="preset-btn" data-width="900" data-height="1200">900×1200</button>
+                    <button class="preset-btn" data-width="1200" data-height="1600">1200×1600</button>
+                    <button class="preset-btn" data-width="1500" data-height="2000">1500×2000</button>
+                    <button class="preset-btn" data-width="3000" data-height="4000">3000×4000</button>
+                </div>
+                
+                <div class="size-info" id="size-info">
+                    Output: 900×1200 pixels
+                </div>
+                
+                <div class="modal-actions">
+                    <button id="cancel-export" class="modal-btn modal-cancel">Cancel</button>
+                    <button id="confirm-export" class="modal-btn modal-confirm">Export</button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -349,6 +528,15 @@
         const resetBtn = document.getElementById('reset-btn');
         const downloadBtn = document.getElementById('download-btn');
         const newImageBtn = document.getElementById('new-image-btn');
+        
+        // Export dialog elements
+        const exportDialog = document.getElementById('export-dialog');
+        const widthInput = document.getElementById('width-input');
+        const heightInput = document.getElementById('height-input');
+        const sizeInfo = document.getElementById('size-info');
+        const cancelExport = document.getElementById('cancel-export');
+        const confirmExport = document.getElementById('confirm-export');
+        const presetButtons = document.querySelectorAll('.preset-btn');
         
         let img = null;
         let imgX = 0;
@@ -618,23 +806,80 @@
             initializeImage();
         });
         
-        // Download button
+        // Export dialog functions
+        function updateDimensions(source) {
+            if (source === 'width') {
+                const width = parseInt(widthInput.value) || 900;
+                const height = Math.round(width * 4 / 3);
+                heightInput.value = height;
+                sizeInfo.textContent = `Output: ${width}×${height} pixels`;
+            } else {
+                const height = parseInt(heightInput.value) || 1200;
+                const width = Math.round(height * 3 / 4);
+                widthInput.value = width;
+                sizeInfo.textContent = `Output: ${width}×${height} pixels`;
+            }
+        }
+        
+        // Width input handler
+        widthInput.addEventListener('input', () => {
+            updateDimensions('width');
+        });
+        
+        // Height input handler
+        heightInput.addEventListener('input', () => {
+            updateDimensions('height');
+        });
+        
+        // Preset buttons
+        presetButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const width = btn.dataset.width;
+                const height = btn.dataset.height;
+                widthInput.value = width;
+                heightInput.value = height;
+                sizeInfo.textContent = `Output: ${width}×${height} pixels`;
+            });
+        });
+        
+        // Show export dialog
         downloadBtn.addEventListener('click', () => {
             if (!img) return;
+            exportDialog.classList.remove('hidden');
+        });
+        
+        // Cancel export
+        cancelExport.addEventListener('click', () => {
+            exportDialog.classList.add('hidden');
+        });
+        
+        // Close dialog on overlay click
+        exportDialog.addEventListener('click', (e) => {
+            if (e.target === exportDialog) {
+                exportDialog.classList.add('hidden');
+            }
+        });
+        
+        // Confirm export
+        confirmExport.addEventListener('click', () => {
+            if (!img) return;
+            
+            const outputWidth = parseInt(widthInput.value) || 900;
+            const outputHeight = parseInt(heightInput.value) || 1200;
             
             const outputCanvas = document.createElement('canvas');
             const outputCtx = outputCanvas.getContext('2d');
             
-            // Set output size (3:4 ratio, 900x1200 for good quality)
-            outputCanvas.width = 900;
-            outputCanvas.height = 1200;
+            // Set exact output size
+            outputCanvas.width = outputWidth;
+            outputCanvas.height = outputHeight;
             
             // Calculate scale factor
-            const scaleFactor = outputCanvas.width / canvas.displayWidth;
+            const scaleFactor = outputWidth / canvas.displayWidth;
             
             // White background
             outputCtx.fillStyle = 'white';
-            outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+            outputCtx.fillRect(0, 0, outputWidth, outputHeight);
             
             // Draw the transformed image
             outputCtx.save();
@@ -654,10 +899,13 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'image-3x4.jpg';
+                a.download = `image-${outputWidth}x${outputHeight}.jpg`;
                 a.click();
                 URL.revokeObjectURL(url);
             }, 'image/jpeg', 0.95);
+            
+            // Close dialog
+            exportDialog.classList.add('hidden');
         });
         
         // New image button
