@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>3x4 Image Cropper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        #canvas-container {
+            touch-action: none;
+        }
+        
+        .crop-area {
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+    <div class="container mx-auto px-4 py-6 max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center">3x4 Image Cropper</h1>
+        
+        <!-- Upload Section -->
+        <div id="upload-section" class="mb-6">
+            <label for="image-upload" class="block w-full">
+                <div class="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-700 transition">
+                    <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-gray-400">Tap to upload image</p>
+                </div>
+            </label>
+            <input type="file" id="image-upload" accept="image/*" class="hidden">
+        </div>
+        
+        <!-- Editor Section -->
+        <div id="editor-section" class="hidden">
+            <!-- Canvas Container -->
+            <div class="relative bg-gray-800 rounded-lg overflow-hidden mb-4" style="padding-bottom: 133.33%;">
+                <div id="canvas-container" class="absolute inset-0">
+                    <canvas id="canvas" class="w-full h-full"></canvas>
+                    <div class="crop-area absolute inset-0 border-2 border-white pointer-events-none"></div>
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="space-y-4">
+                <div class="flex items-center space-x-4 bg-gray-800 p-3 rounded-lg">
+                    <span class="text-sm text-gray-400 w-16">Zoom:</span>
+                    <input type="range" id="zoom-slider" min="0.1" max="3" step="0.1" value="1" class="flex-1">
+                    <span id="zoom-value" class="text-sm w-12 text-right">1.0x</span>
+                </div>
+                
+                <div class="text-xs text-gray-400 text-center">
+                    Use two fingers to pinch & zoom, one finger to drag
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button id="reset-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 px-4 rounded-lg transition">
+                        Reset
+                    </button>
+                    <button id="download-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 px-4 rounded-lg transition font-semibold">
+                        Download 3x4
+                    </button>
+                </div>
+                
+                <button id="new-image-btn" class="w-full bg-gray-800 hover:bg-gray-700 py-2 px-4 rounded-lg transition text-sm">
+                    Upload New Image
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const uploadSection = document.getElementById('upload-section');
+        const editorSection = document.getElementById('editor-section');
+        const imageUpload = document.getElementById('image-upload');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvas-container');
+        const zoomSlider = document.getElementById('zoom-slider');
+        const zoomValue = document.getElementById('zoom-value');
+        const resetBtn = document.getElementById('reset-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const newImageBtn = document.getElementById('new-image-btn');
+        
+        let img = null;
+        let imgX = 0;
+        let imgY = 0;
+        let imgScale = 1;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let initialDistance = 0;
+        let initialScale = 1;
+        
+        // Set canvas size (3:4 aspect ratio)
+        function setupCanvas() {
+            const rect = canvasContainer.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        
+        // Handle image upload
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img = new Image();
+                    img.onload = () => {
+                        setupCanvas();
+                        initializeImage();
+                        showEditor();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Initialize image position and scale
+        function initializeImage() {
+            const canvasAspect = canvas.width / canvas.height;
+            const imgAspect = img.width / img.height;
+            
+            if (imgAspect > canvasAspect) {
+                imgScale = canvas.height / img.height;
+            } else {
+                imgScale = canvas.width / img.width;
+            }
+            
+            imgX = (canvas.width - img.width * imgScale) / 2;
+            imgY = (canvas.height - img.height * imgScale) / 2;
+            
+            zoomSlider.value = imgScale;
+            zoomValue.textContent = imgScale.toFixed(1) + 'x';
+            
+            draw();
+        }
+        
+        // Draw image on canvas
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (img) {
+                ctx.drawImage(img, imgX, imgY, img.width * imgScale, img.height * imgScale);
+            }
+        }
+        
+        // Touch events for mobile
+        canvasContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX - imgX;
+                startY = e.touches[0].clientY - imgY;
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                initialDistance = Math.sqrt(dx * dx + dy * dy);
+                initialScale = imgScale;
+            }
+        });
+        
+        canvasContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            
+            if (e.touches.length === 1 && isDragging) {
+                imgX = e.touches[0].clientX - startX;
+                imgY = e.touches[0].clientY - startY;
+                draw();
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const scale = (distance / initialDistance) * initialScale;
+                
+                imgScale = Math.max(0.1, Math.min(3, scale));
+                zoomSlider.value = imgScale;
+                zoomValue.textContent = imgScale.toFixed(1) + 'x';
+                
+                draw();
+            }
+        });
+        
+        canvasContainer.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isDragging = false;
+        });
+        
+        // Mouse events for desktop
+        canvasContainer.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - imgX;
+            startY = e.clientY - imgY;
+        });
+        
+        canvasContainer.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                imgX = e.clientX - startX;
+                imgY = e.clientY - startY;
+                draw();
+            }
+        });
+        
+        canvasContainer.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        canvasContainer.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+        
+        // Zoom slider
+        zoomSlider.addEventListener('input', (e) => {
+            imgScale = parseFloat(e.target.value);
+            zoomValue.textContent = imgScale.toFixed(1) + 'x';
+            
+            // Center the zoom
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const currentCenterX = imgX + (img.width * imgScale) / 2;
+            const currentCenterY = imgY + (img.height * imgScale) / 2;
+            
+            imgX += centerX - currentCenterX;
+            imgY += centerY - currentCenterY;
+            
+            draw();
+        });
+        
+        // Reset button
+        resetBtn.addEventListener('click', () => {
+            initializeImage();
+        });
+        
+        // Download button
+        downloadBtn.addEventListener('click', () => {
+            const outputCanvas = document.createElement('canvas');
+            const outputCtx = outputCanvas.getContext('2d');
+            
+            // Set output size (3:4 ratio, 900x1200 for good quality)
+            outputCanvas.width = 900;
+            outputCanvas.height = 1200;
+            
+            // Calculate scale factor
+            const scaleFactor = outputCanvas.width / canvas.width;
+            
+            // Draw the image at the scaled position
+            outputCtx.fillStyle = '#1f2937';
+            outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+            outputCtx.drawImage(
+                img,
+                imgX * scaleFactor,
+                imgY * scaleFactor,
+                img.width * imgScale * scaleFactor,
+                img.height * imgScale * scaleFactor
+            );
+            
+            // Download
+            outputCanvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'image-3x4.jpg';
+                a.click();
+                URL.revokeObjectURL(url);
+            }, 'image/jpeg', 0.95);
+        });
+        
+        // New image button
+        newImageBtn.addEventListener('click', () => {
+            imageUpload.value = '';
+            img = null;
+            showUpload();
+        });
+        
+        // Show/hide sections
+        function showEditor() {
+            uploadSection.classList.add('hidden');
+            editorSection.classList.remove('hidden');
+        }
+        
+        function showUpload() {
+            uploadSection.classList.remove('hidden');
+            editorSection.classList.add('hidden');
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (img) {
+                setupCanvas();
+                draw();
+            }
+        });
+    </script>
+</body>
+</html>
